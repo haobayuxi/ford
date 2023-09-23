@@ -7,17 +7,24 @@
 
 MetaManager::MetaManager() {
   // Read config json file
-  std::string config_filepath = "../../../config/compute_node_config.json";
+  std::string config_filepath = "compute_node_config.json";
   auto json_config = JsonConfig::load_file(config_filepath);
   auto local_node = json_config.get("local_compute_node");
   local_machine_id = (node_id_t)local_node.get("machine_id").get_int64();
   txn_system = local_node.get("txn_system").get_int64();
-  RDMA_LOG(INFO) << "Run " << (txn_system == 0 ? "FaRM" : (txn_system == 1 ? "DrTM+H" : (txn_system == 2 ? "FORD" : "FORD-LOCAL")));
+  RDMA_LOG(INFO) << "Run "
+                 << (txn_system == 0
+                         ? "FaRM"
+                         : (txn_system == 1
+                                ? "DrTM+H"
+                                : (txn_system == 2 ? "FORD" : "FORD-LOCAL")));
 
   auto pm_nodes = json_config.get("remote_pm_nodes");
-  auto remote_ips = pm_nodes.get("remote_ips");                // Array
-  auto remote_ports = pm_nodes.get("remote_ports");            // Array Used for RDMA exchanges
-  auto remote_meta_ports = pm_nodes.get("remote_meta_ports");  // Array Used for transferring datastore metas
+  auto remote_ips = pm_nodes.get("remote_ips");  // Array
+  auto remote_ports =
+      pm_nodes.get("remote_ports");  // Array Used for RDMA exchanges
+  auto remote_meta_ports = pm_nodes.get(
+      "remote_meta_ports");  // Array Used for transferring datastore metas
 
   // Get remote machine's memory store meta via TCP
   for (size_t index = 0; index < remote_ips.size(); index++) {
@@ -26,10 +33,13 @@ MetaManager::MetaManager() {
     // RDMA_LOG(INFO) << "get hash meta from " << remote_ip;
     node_id_t remote_machine_id = GetMemStoreMeta(remote_ip, remote_meta_port);
     if (remote_machine_id == -1) {
-      std::cerr << "Thread " << std::this_thread::get_id() << " GetMemStoreMeta() failed!, remote_machine_id = -1" << std::endl;
+      std::cerr << "Thread " << std::this_thread::get_id()
+                << " GetMemStoreMeta() failed!, remote_machine_id = -1"
+                << std::endl;
     }
     int remote_port = (int)remote_ports.get(index).get_int64();
-    remote_nodes.push_back(RemoteNode{.node_id = remote_machine_id, .ip = remote_ip, .port = remote_port});
+    remote_nodes.push_back(RemoteNode{
+        .node_id = remote_machine_id, .ip = remote_ip, .port = remote_port});
   }
   RDMA_LOG(INFO) << "All hash meta received";
 
@@ -51,7 +61,8 @@ MetaManager::MetaManager() {
   // RDMA_LOG(INFO) << "client: All remote mr meta received!";
 }
 
-node_id_t MetaManager::GetMemStoreMeta(std::string& remote_ip, int remote_port) {
+node_id_t MetaManager::GetMemStoreMeta(std::string& remote_ip,
+                                       int remote_port) {
   // Get remote memory store metadata for remote accesses, via TCP
   /* ---------------Initialize socket---------------- */
   struct sockaddr_in server_addr;
@@ -72,7 +83,8 @@ node_id_t MetaManager::GetMemStoreMeta(std::string& remote_ip, int remote_port) 
     close(client_socket);
     return -1;
   }
-  if (connect(client_socket, (struct sockaddr*)&server_addr, sizeof(server_addr)) < 0) {
+  if (connect(client_socket, (struct sockaddr*)&server_addr,
+              sizeof(server_addr)) < 0) {
     RDMA_LOG(ERROR) << "MetaManager connect error: " << strerror(errno);
     close(client_socket);
     return -1;
@@ -83,7 +95,8 @@ node_id_t MetaManager::GetMemStoreMeta(std::string& remote_ip, int remote_port) 
   char* recv_buf = (char*)malloc(hash_meta_size);
   auto retlen = recv(client_socket, recv_buf, hash_meta_size, 0);
   if (retlen < 0) {
-    RDMA_LOG(ERROR) << "MetaManager receives hash meta error: " << strerror(errno);
+    RDMA_LOG(ERROR) << "MetaManager receives hash meta error: "
+                    << strerror(errno);
     free(recv_buf);
     close(client_socket);
     return -1;
@@ -99,7 +112,8 @@ node_id_t MetaManager::GetMemStoreMeta(std::string& remote_ip, int remote_port) 
   snooper += sizeof(backup_meta_num);
   node_id_t remote_machine_id = *((node_id_t*)snooper);
   if (remote_machine_id >= MAX_REMOTE_NODE_NUM) {
-    RDMA_LOG(FATAL) << "remote machine id " << remote_machine_id << " exceeds the max machine number";
+    RDMA_LOG(FATAL) << "remote machine id " << remote_machine_id
+                    << " exceeds the max machine number";
   }
   snooper += sizeof(remote_machine_id);
   // Get the `end of file' indicator: finish transmitting
@@ -107,29 +121,37 @@ node_id_t MetaManager::GetMemStoreMeta(std::string& remote_ip, int remote_port) 
   if ((*((uint64_t*)eof)) == MEM_STORE_META_END) {
     for (size_t i = 0; i < primary_meta_num; i++) {
       HashMeta meta;
-      memcpy(&meta, (HashMeta*)(snooper + i * sizeof(HashMeta)), sizeof(HashMeta));
+      memcpy(&meta, (HashMeta*)(snooper + i * sizeof(HashMeta)),
+             sizeof(HashMeta));
       primary_hash_metas[meta.table_id] = meta;
       primary_table_nodes[meta.table_id] = remote_machine_id;
-      // RDMA_LOG(INFO) << "primary_node_ip: " << remote_ip << " table id: " << meta.table_id << " data_ptr: 0x" << std::hex << meta.data_ptr << " base_off: 0x" << meta.base_off << " bucket_num: " << std::dec << meta.bucket_num << " node_size: " << meta.node_size << " B";
+      // RDMA_LOG(INFO) << "primary_node_ip: " << remote_ip << " table id: " <<
+      // meta.table_id << " data_ptr: 0x" << std::hex << meta.data_ptr << "
+      // base_off: 0x" << meta.base_off << " bucket_num: " << std::dec <<
+      // meta.bucket_num << " node_size: " << meta.node_size << " B";
     }
     snooper += sizeof(HashMeta) * primary_meta_num;
     for (size_t i = 0; i < backup_meta_num; i++) {
       HashMeta meta;
-      memcpy(&meta, (HashMeta*)(snooper + i * sizeof(HashMeta)), sizeof(HashMeta));
+      memcpy(&meta, (HashMeta*)(snooper + i * sizeof(HashMeta)),
+             sizeof(HashMeta));
 
       // if (backup_hash_metas.find(meta.table_id) == backup_hash_metas.end()) {
       //   backup_hash_metas[meta.table_id] = std::vector<HashMeta>();
       // }
-      // if (backup_table_nodes.find(meta.table_id) == backup_table_nodes.end()) {
+      // if (backup_table_nodes.find(meta.table_id) == backup_table_nodes.end())
+      // {
       //   backup_table_nodes[meta.table_id] = std::vector<node_id_t>();
       // }
       // backup_hash_metas[meta.table_id].push_back(meta);
       // backup_table_nodes[meta.table_id].push_back(remote_machine_id);
-      // RDMA_LOG(INFO) << "backup_node_ip: " << remote_ip << " table id: " << meta.table_id << " data_ptr: " << std::hex << meta.data_ptr << " base_off: " << meta.base_off << " bucket_num: " << std::dec << meta.bucket_num << " node_size: " << meta.node_size;
+      // RDMA_LOG(INFO) << "backup_node_ip: " << remote_ip << " table id: " <<
+      // meta.table_id << " data_ptr: " << std::hex << meta.data_ptr << "
+      // base_off: " << meta.base_off << " bucket_num: " << std::dec <<
+      // meta.bucket_num << " node_size: " << meta.node_size;
 
       backup_hash_metas[meta.table_id].push_back(meta);
       backup_table_nodes[meta.table_id].push_back(remote_machine_id);
-
     }
   } else {
     free(recv_buf);
@@ -143,10 +165,12 @@ void MetaManager::GetMRMeta(const RemoteNode& node) {
   // Get remote node's memory region information via TCP
   MemoryAttr remote_hash_mr{}, remote_log_mr{};
 
-  while (QP::get_remote_mr(node.ip, node.port, SERVER_HASH_BUFF_ID, &remote_hash_mr) != SUCC) {
+  while (QP::get_remote_mr(node.ip, node.port, SERVER_HASH_BUFF_ID,
+                           &remote_hash_mr) != SUCC) {
     usleep(2000);
   }
-  while (QP::get_remote_mr(node.ip, node.port, SERVER_LOG_BUFF_ID, &remote_log_mr) != SUCC) {
+  while (QP::get_remote_mr(node.ip, node.port, SERVER_LOG_BUFF_ID,
+                           &remote_log_mr) != SUCC) {
     usleep(2000);
   }
   remote_log_mrs[node.node_id] = remote_log_mr;

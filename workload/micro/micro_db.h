@@ -16,9 +16,7 @@ union micro_key_t {
   uint64_t micro_id;
   uint64_t item_key;
 
-  micro_key_t() {
-    item_key = 0;
-  }
+  micro_key_t() { item_key = 0; }
 };
 
 static_assert(sizeof(micro_key_t) == sizeof(uint64_t), "");
@@ -43,8 +41,7 @@ enum class MicroTableType : uint64_t {
   kMicroTable = TABLE_MICRO,
 };
 
-static ALWAYS_INLINE 
-uint64_t align_pow2(uint64_t v) {
+static ALWAYS_INLINE uint64_t align_pow2(uint64_t v) {
   v--;
   v |= v >> 1;
   v |= v >> 2;
@@ -58,21 +55,22 @@ uint64_t align_pow2(uint64_t v) {
 class MICRO {
  public:
   std::string bench_name;
-  
+
   uint64_t num_keys_global;
 
   /* Tables */
   HashStore* micro_table;
 
   std::vector<HashStore*> primary_table_ptrs;
-  
+
   std::vector<HashStore*> backup_table_ptrs;
 
   // For server usage: Provide interfaces to servers for loading tables
-  // Also for client usage: Provide interfaces to clients for generating ids during tests
+  // Also for client usage: Provide interfaces to clients for generating ids
+  // during tests
   MICRO() {
     bench_name = "MICRO";
-    std::string config_filepath = "../../../config/micro_config.json";
+    std::string config_filepath = "micro_config.json";
     auto json_config = JsonConfig::load_file(config_filepath);
     auto conf = json_config.get("micro");
     auto num_keys = conf.get("num_keys").get_int64();
@@ -84,27 +82,19 @@ class MICRO {
     if (micro_table) delete micro_table;
   }
 
-  void LoadTable(node_id_t node_id,
-                 node_id_t num_server,
+  void LoadTable(node_id_t node_id, node_id_t num_server,
                  MemStoreAllocParam* mem_store_alloc_param,
                  MemStoreReserveParam* mem_store_reserve_param);
 
   void PopulateMicroTable(MemStoreReserveParam* mem_store_reserve_param);
 
-  int LoadRecord(HashStore* table,
-                 itemkey_t item_key,
-                 void* val_ptr,
-                 size_t val_size,
-                 table_id_t table_id,
+  int LoadRecord(HashStore* table, itemkey_t item_key, void* val_ptr,
+                 size_t val_size, table_id_t table_id,
                  MemStoreReserveParam* mem_store_reserve_param);
 
   ALWAYS_INLINE
-  std::vector<HashStore*> GetPrimaryHashStore() {
-    return primary_table_ptrs;
-  }
+  std::vector<HashStore*> GetPrimaryHashStore() { return primary_table_ptrs; }
 
   ALWAYS_INLINE
-  std::vector<HashStore*> GetBackupHashStore() {
-    return backup_table_ptrs;
-  }
+  std::vector<HashStore*> GetBackupHashStore() { return backup_table_ptrs; }
 };

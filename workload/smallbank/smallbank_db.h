@@ -32,9 +32,7 @@ union smallbank_savings_key_t {
   uint64_t acct_id;
   uint64_t item_key;
 
-  smallbank_savings_key_t() {
-    item_key = 0;
-  }
+  smallbank_savings_key_t() { item_key = 0; }
 };
 
 static_assert(sizeof(smallbank_savings_key_t) == sizeof(uint64_t), "");
@@ -52,9 +50,7 @@ union smallbank_checking_key_t {
   uint64_t acct_id;
   uint64_t item_key;
 
-  smallbank_checking_key_t() {
-    item_key = 0;
-  }
+  smallbank_checking_key_t() { item_key = 0; }
 };
 
 static_assert(sizeof(smallbank_checking_key_t) == sizeof(uint64_t), "");
@@ -81,9 +77,9 @@ enum class SmallBankTxType : int {
   kWriteCheck,
 };
 
-
-const std::string SmallBank_TX_NAME[SmallBank_TX_TYPES] = {"Amalgamate", "Balance", "DepositChecking", \
-"SendPayment", "TransactSaving", "WriteCheck"};
+const std::string SmallBank_TX_NAME[SmallBank_TX_TYPES] = {
+    "Amalgamate",  "Balance",        "DepositChecking",
+    "SendPayment", "TransactSaving", "WriteCheck"};
 
 // Table id
 enum class SmallBankTableType : uint64_t {
@@ -109,11 +105,12 @@ class SmallBank {
   std::vector<HashStore*> backup_table_ptrs;
 
   // For server usage: Provide interfaces to servers for loading tables
-  // Also for client usage: Provide interfaces to clients for generating ids during tests
+  // Also for client usage: Provide interfaces to clients for generating ids
+  // during tests
   SmallBank() {
     bench_name = "SmallBank";
     // Used for populate table (line num) and get account
-    std::string config_filepath = "../../../config/smallbank_config.json";
+    std::string config_filepath = "smallbank_config.json";
     auto json_config = JsonConfig::load_file(config_filepath);
     auto conf = json_config.get("smallbank");
     num_accounts_global = conf.get("num_accounts").get_uint64();
@@ -170,7 +167,8 @@ class SmallBank {
     }
   }
 
-  inline void get_two_accounts(uint64_t* seed, uint64_t* acct_id_0, uint64_t* acct_id_1) const {
+  inline void get_two_accounts(uint64_t* seed, uint64_t* acct_id_0,
+                               uint64_t* acct_id_1) const {
     if (FastRand(seed) % 100 < TX_HOT) {
       *acct_id_0 = FastRand(seed) % num_hot_global;
       *acct_id_1 = FastRand(seed) % num_hot_global;
@@ -186,8 +184,7 @@ class SmallBank {
     }
   }
 
-  void LoadTable(node_id_t node_id,
-                 node_id_t num_server,
+  void LoadTable(node_id_t node_id, node_id_t num_server,
                  MemStoreAllocParam* mem_store_alloc_param,
                  MemStoreReserveParam* mem_store_reserve_param);
 
@@ -195,20 +192,13 @@ class SmallBank {
 
   void PopulateCheckingTable(MemStoreReserveParam* mem_store_reserve_param);
 
-  int LoadRecord(HashStore* table,
-                 itemkey_t item_key,
-                 void* val_ptr,
-                 size_t val_size,
-                 table_id_t table_id,
+  int LoadRecord(HashStore* table, itemkey_t item_key, void* val_ptr,
+                 size_t val_size, table_id_t table_id,
                  MemStoreReserveParam* mem_store_reserve_param);
 
   ALWAYS_INLINE
-  std::vector<HashStore*> GetPrimaryHashStore() {
-    return primary_table_ptrs;
-  }
+  std::vector<HashStore*> GetPrimaryHashStore() { return primary_table_ptrs; }
 
   ALWAYS_INLINE
-  std::vector<HashStore*> GetBackupHashStore() {
-    return backup_table_ptrs;
-  }
+  std::vector<HashStore*> GetBackupHashStore() { return backup_table_ptrs; }
 };
