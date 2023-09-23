@@ -57,7 +57,7 @@ void Handler::ConfigureComputeNode(int argc, char* argv[]) {
 }
 
 void Handler::GenThreads(std::string bench_name) {
-  std::string config_filepath = "config/compute_node_config.json";
+  std::string config_filepath = "compute_node_config.json";
   auto json_config = JsonConfig::load_file(config_filepath);
   auto client_conf = json_config.get("local_compute_node");
   node_id_t machine_num = (node_id_t)client_conf.get("machine_num").get_int64();
@@ -256,7 +256,7 @@ void Handler::OutputResult(std::string bench_name, std::string system_name) {
 }
 
 void Handler::ConfigureComputeNodeForMICRO(int argc, char* argv[]) {
-  std::string workload_filepath = "config/micro_config.json";
+  std::string workload_filepath = "micro_config.json";
   std::string arg = std::string(argv[1]);
   char access_type = arg[0];
   std::string s;
@@ -275,7 +275,7 @@ void Handler::ConfigureComputeNodeForMICRO(int argc, char* argv[]) {
 }
 
 void Handler::GenThreadsForMICRO() {
-  std::string config_filepath = "config/compute_node_config.json";
+  std::string config_filepath = "compute_node_config.json";
   std::string s = "sed -i '8c \"txn_system\": 2,' " + config_filepath;
   system(s.c_str());
   auto json_config = JsonConfig::load_file(config_filepath);

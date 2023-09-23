@@ -13,8 +13,8 @@
 #include "util/json_config.h"
 
 /*
- * Up to 1 billion subscribers so that FastGetSubscribeNumFromSubscribeID() requires
- * only 3 modulo operations.
+ * Up to 1 billion subscribers so that FastGetSubscribeNumFromSubscribeID()
+ * requires only 3 modulo operations.
  */
 #define TATP_MAX_SUBSCRIBERS 1000000000
 
@@ -27,7 +27,8 @@
 #define FREQUENCY_INSERT_CALL_FORWARDING 2  // Multi
 #define FREQUENCY_DELETE_CALL_FORWARDING 2  // Multi
 
-/******************** TATP table definitions (Schemas of key and value) start **********************/
+/******************** TATP table definitions (Schemas of key and value) start
+ * **********************/
 // All keys have been sized to 8 bytes
 // All values have been sized to the next multiple of 8 bytes
 
@@ -76,16 +77,15 @@ union tatp_sub_key_t {
   };
   itemkey_t item_key;
 
-  tatp_sub_key_t() {
-    item_key = 0;
-  }
+  tatp_sub_key_t() { item_key = 0; }
 };
 
 static_assert(sizeof(tatp_sub_key_t) == sizeof(itemkey_t), "");
 
 struct tatp_sub_val_t {
   tatp_sub_number_t sub_number;
-  char sub_number_unused[7]; /* sub_number should be 15 bytes. We used 8 above. */
+  char sub_number_unused[7]; /* sub_number should be 15 bytes. We used 8 above.
+                              */
   char hex[5];
   char bytes[10];
   short bits;
@@ -103,9 +103,7 @@ union tatp_sec_sub_key_t {
   tatp_sub_number_t sub_number;
   itemkey_t item_key;
 
-  tatp_sec_sub_key_t() {
-    item_key = 0;
-  }
+  tatp_sec_sub_key_t() { item_key = 0; }
 };
 
 static_assert(sizeof(tatp_sec_sub_key_t) == sizeof(itemkey_t), "");
@@ -130,9 +128,7 @@ union tatp_accinf_key_t {
   };
   itemkey_t item_key;
 
-  tatp_accinf_key_t() {
-    item_key = 0;
-  }
+  tatp_accinf_key_t() { item_key = 0; }
 };
 
 static_assert(sizeof(tatp_accinf_key_t) == sizeof(itemkey_t), "");
@@ -159,9 +155,7 @@ union tatp_specfac_key_t {
   };
   itemkey_t item_key;
 
-  tatp_specfac_key_t() {
-    item_key = 0;
-  }
+  tatp_specfac_key_t() { item_key = 0; }
 };
 
 static_assert(sizeof(tatp_specfac_key_t) == sizeof(itemkey_t), "");
@@ -188,9 +182,7 @@ union tatp_callfwd_key_t {
   };
   itemkey_t item_key;
 
-  tatp_callfwd_key_t() {
-    item_key = 0;
-  }
+  tatp_callfwd_key_t() { item_key = 0; }
 };
 
 static_assert(sizeof(tatp_callfwd_key_t) == sizeof(itemkey_t), "");
@@ -201,7 +193,8 @@ struct tatp_callfwd_val_t {
 };
 static_assert(sizeof(tatp_callfwd_val_t) == 16, "");
 
-/******************** TATP table definitions (Schemas of key and value) end **********************/
+/******************** TATP table definitions (Schemas of key and value) end
+ * **********************/
 
 // Magic numbers for debugging. These are unused in the spec.
 #define TATP_MAGIC 97 /* Some magic number <= 255 */
@@ -223,8 +216,10 @@ enum class TATPTxType : uint64_t {
   kDeleteCallForwarding,
 };
 
-const std::string TATP_TX_NAME[TATP_TX_TYPES] = {"GetSubsciberData", "GetAccessData", "GetNewDestination", \
-"UpdateSubscriberData", "UpdateLocation", "InsertCallForwarding", "DeleteCallForwarding"};
+const std::string TATP_TX_NAME[TATP_TX_TYPES] = {
+    "GetSubsciberData",     "GetAccessData",  "GetNewDestination",
+    "UpdateSubscriberData", "UpdateLocation", "InsertCallForwarding",
+    "DeleteCallForwarding"};
 
 // Table id
 enum class TATPTableType : uint64_t {
@@ -262,7 +257,8 @@ class TATP {
 
   std::vector<HashStore*> backup_table_ptrs;
 
-  // For server and client usage: Provide interfaces to servers for loading tables
+  // For server and client usage: Provide interfaces to servers for loading
+  // tables
   TATP() {
     bench_name = "TATP";
     /* Init the precomputed decimal map */
@@ -274,7 +270,7 @@ class TATP {
       map_1000[i] = (dig_3 << 8) | (dig_2 << 4) | dig_1;
     }
 
-    std::string config_filepath = "../../../config/tatp_config.json";
+    std::string config_filepath = "tatp_config.json";
     auto json_config = JsonConfig::load_file(config_filepath);
     auto conf = json_config.get("tatp");
     subscriber_size = conf.get("num_subscriber").get_uint64();
@@ -413,35 +409,31 @@ class TATP {
   }
 
   // For server-side usage
-  void LoadTable(node_id_t node_id,
-                 node_id_t num_server,
+  void LoadTable(node_id_t node_id, node_id_t num_server,
                  MemStoreAllocParam* mem_store_alloc_param,
                  MemStoreReserveParam* mem_store_reserve_param);
 
   void PopulateSubscriberTable(MemStoreReserveParam* mem_store_reserve_param);
 
-  void PopulateSecondarySubscriberTable(MemStoreReserveParam* mem_store_reserve_param);
+  void PopulateSecondarySubscriberTable(
+      MemStoreReserveParam* mem_store_reserve_param);
 
   void PopulateAccessInfoTable(MemStoreReserveParam* mem_store_reserve_param);
 
-  void PopulateSpecfacAndCallfwdTable(MemStoreReserveParam* mem_store_reserve_param);
+  void PopulateSpecfacAndCallfwdTable(
+      MemStoreReserveParam* mem_store_reserve_param);
 
-  int LoadRecord(HashStore* table,
-                 itemkey_t item_key,
-                 void* val_ptr,
-                 size_t val_size,
-                 table_id_t table_id,
+  int LoadRecord(HashStore* table, itemkey_t item_key, void* val_ptr,
+                 size_t val_size, table_id_t table_id,
                  MemStoreReserveParam* mem_store_reserve_param);
 
-  std::vector<uint8_t> SelectUniqueItem(uint64_t* tmp_seed, std::vector<uint8_t> values, unsigned N, unsigned M);
+  std::vector<uint8_t> SelectUniqueItem(uint64_t* tmp_seed,
+                                        std::vector<uint8_t> values, unsigned N,
+                                        unsigned M);
 
   ALWAYS_INLINE
-  std::vector<HashStore*> GetPrimaryHashStore() {
-    return primary_table_ptrs;
-  }
+  std::vector<HashStore*> GetPrimaryHashStore() { return primary_table_ptrs; }
 
   ALWAYS_INLINE
-  std::vector<HashStore*> GetBackupHashStore() {
-    return backup_table_ptrs;
-  }
+  std::vector<HashStore*> GetBackupHashStore() { return backup_table_ptrs; }
 };
