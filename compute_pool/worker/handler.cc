@@ -57,7 +57,7 @@ void Handler::ConfigureComputeNode(int argc, char* argv[]) {
 }
 
 void Handler::GenThreads(std::string bench_name) {
-  std::string config_filepath = "../../../config/compute_node_config.json";
+  std::string config_filepath = "config/compute_node_config.json";
   auto json_config = JsonConfig::load_file(config_filepath);
   auto client_conf = json_config.get("local_compute_node");
   node_id_t machine_num = (node_id_t)client_conf.get("machine_num").get_int64();
@@ -148,14 +148,14 @@ void Handler::GenThreads(std::string bench_name) {
 }
 
 void Handler::OutputResult(std::string bench_name, std::string system_name) {
-  std::string results_cmd = "mkdir -p ../../../bench_results/" + bench_name;
+  std::string results_cmd = "mkdir -p bench_results/" + bench_name;
   system(results_cmd.c_str());
   std::ofstream of, of_detail, of_abort_rate;
-  std::string res_file = "../../../bench_results/" + bench_name + "/result.txt";
+  std::string res_file = "bench_results/" + bench_name + "/result.txt";
   std::string detail_res_file =
-      "../../../bench_results/" + bench_name + "/detail_result.txt";
+      "bench_results/" + bench_name + "/detail_result.txt";
   std::string abort_rate_file =
-      "../../../bench_results/" + bench_name + "/abort_rate.txt";
+      "bench_results/" + bench_name + "/abort_rate.txt";
 
   of.open(res_file.c_str(), std::ios::app);
   of_detail.open(detail_res_file.c_str(), std::ios::app);
@@ -238,8 +238,7 @@ void Handler::OutputResult(std::string bench_name, std::string system_name) {
 #if LOCK_WAIT
   if (bench_name == "MICRO") {
     // print avg lock duration
-    std::string file =
-        "../../../bench_results/" + bench_name + "/avg_lock_duration.txt";
+    std::string file = "bench_results/" + bench_name + "/avg_lock_duration.txt";
     of.open(file.c_str(), std::ios::app);
 
     double total_lock_dur = 0;
@@ -257,7 +256,7 @@ void Handler::OutputResult(std::string bench_name, std::string system_name) {
 }
 
 void Handler::ConfigureComputeNodeForMICRO(int argc, char* argv[]) {
-  std::string workload_filepath = "../../../config/micro_config.json";
+  std::string workload_filepath = "config/micro_config.json";
   std::string arg = std::string(argv[1]);
   char access_type = arg[0];
   std::string s;
@@ -276,7 +275,7 @@ void Handler::ConfigureComputeNodeForMICRO(int argc, char* argv[]) {
 }
 
 void Handler::GenThreadsForMICRO() {
-  std::string config_filepath = "../../../config/compute_node_config.json";
+  std::string config_filepath = "config/compute_node_config.json";
   std::string s = "sed -i '8c \"txn_system\": 2,' " + config_filepath;
   system(s.c_str());
   auto json_config = JsonConfig::load_file(config_filepath);
@@ -298,10 +297,9 @@ void Handler::GenThreadsForMICRO() {
         std::to_string(thread_num_per_machine) + "_" + std::to_string(coro_num);
   }
 
-  system(std::string("mkdir -p ../../../bench_results/MICRO/" +
-                     thread_num_coro_num)
+  system(std::string("mkdir -p bench_results/MICRO/" + thread_num_coro_num)
              .c_str());
-  system(std::string("rm ../../../bench_results/MICRO/" + thread_num_coro_num +
+  system(std::string("rm bench_results/MICRO/" + thread_num_coro_num +
                      "/total_lock_duration.txt")
              .c_str());
 
