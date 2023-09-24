@@ -33,16 +33,6 @@
 #include "util/hash.h"
 #include "util/json_config.h"
 
-long long get_clock_sys_time_us() {
-  struct timespec tp;
-  long long time_us = 0;
-
-  clock_gettime(CLOCK_MONOTONIC, &tp);
-  time_us = (long long)tp.tv_sec * 1000000 + tp.tv_nsec / 1000;
-
-  return time_us;
-}
-
 /* One-sided RDMA-enabled distributed transaction processing */
 class DTX {
  public:
@@ -56,6 +46,7 @@ class DTX {
   bool TxExe(coro_yield_t& yield, bool fail_abort = true);
 
   bool TxCommit(coro_yield_t& yield);
+  long long get_clock_sys_time_us();
 
   /*****************************************************/
 
@@ -372,6 +363,17 @@ void DTX::AddToReadOnlySet(DataItemPtr item) {
                             .read_which_node = -1,
                             .bkt_idx = -1};
   read_only_set.emplace_back(data_set_item);
+}
+
+ALWAYS_INLINE
+long long DTX::get_clock_sys_time_us() {
+  struct timespec tp;
+  long long time_us = 0;
+
+  clock_gettime(CLOCK_MONOTONIC, &tp);
+  time_us = (long long)tp.tv_sec * 1000000 + tp.tv_nsec / 1000;
+
+  return time_us;
 }
 
 ALWAYS_INLINE
