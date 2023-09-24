@@ -84,10 +84,9 @@ bool DTX::CompareCheckReadRORW(
     std::list<InsertOffRead>& pending_next_off_rw,
     std::list<InvisibleRead>& pending_invisible_ro, coro_yield_t& yield) {
   if (!CheckDirectRO(pending_direct_ro, pending_invisible_ro,
-                     pending_next_hash_ro, false))
+                     pending_next_hash_ro))
     return false;
-  if (!CheckHashRO(pending_hash_ro, pending_invisible_ro, pending_next_hash_ro,
-                   false))
+  if (!CheckHashRO(pending_hash_ro, pending_invisible_ro, pending_next_hash_ro))
     return false;
 
   if (!CompareCheckDirectRW(pending_direct_rw, pending_next_hash_rw,
