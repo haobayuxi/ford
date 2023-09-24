@@ -53,7 +53,8 @@ bool DTX::ExeRO(coro_yield_t& yield) {
   // Receive data
   std::list<InvisibleRead> pending_invisible_ro;
   std::list<HashRead> pending_next_hash_ro;
-  // RDMA_LOG(INFO) << "lease: " << end_time - start_time;
+  RDMA_LOG(INFO) << "lease: " << end_time - start_time << "---"
+                 << lease_expired;
   // RDMA_LOG(DBG) << "coro: " << coro_id << " tx_id: " << tx_id << " check read
   // ro";
   auto res =
