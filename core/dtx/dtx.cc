@@ -3,16 +3,20 @@
 
 #include "dtx/dtx.h"
 
-DTX::DTX(MetaManager* meta_man,
-         QPManager* qp_man,
-         VersionCache* status,
-         LockCache* lock_table,
-         t_id_t tid,
-         coro_id_t coroid,
-         CoroutineScheduler* sched,
-         RDMABufferAllocator* rdma_buffer_allocator,
-         LogOffsetAllocator* remote_log_offset_allocator,
-         AddrCache* addr_buf) {
+long long get_clock_sys_time_us() {
+  struct timespec tp;
+  long long time_us = 0;
+
+  clock_gettime(CLOCK_MONOTONIC, &tp);
+  time_us = (long long)tp.tv_sec * 1000000 + tp.tv_nsec / 1000;
+
+  return time_us;
+}
+
+DTX::DTX(MetaManager* meta_man, QPManager* qp_man, VersionCache* status,
+         LockCache* lock_table, t_id_t tid, coro_id_t coroid,
+         CoroutineScheduler* sched, RDMABufferAllocator* rdma_buffer_allocator,
+         LogOffsetAllocator* remote_log_offset_allocator, AddrCache* addr_buf) {
   // Transaction setup
   tx_id = 0;
   t_id = tid;
@@ -37,20 +41,23 @@ bool DTX::ExeRO(coro_yield_t& yield) {
   // You can read from primary or backup
   std::vector<DirectRead> pending_direct_ro;
   std::vector<HashRead> pending_hash_ro;
-
-  // Issue reads
-  // RDMA_LOG(DBG) << "coro: " << coro_id << " tx_id: " << tx_id << " issue read ro";
+  // start time
+  long long start_time = get_clock_sys_time_us();
   if (!IssueReadRO(pending_direct_ro, pending_hash_ro)) return false;
 
   // Yield to other coroutines when waiting for network replies
   coro_sched->Yield(yield, coro_id);
 
+  long long end_time = get_clock_sys_time_us();
+  auto lease_expired = (end_time - start_time) < 10;
   // Receive data
   std::list<InvisibleRead> pending_invisible_ro;
   std::list<HashRead> pending_next_hash_ro;
-  // RDMA_LOG(DBG) << "coro: " << coro_id << " tx_id: " << tx_id << " check read ro";
-  auto res = CheckReadRO(pending_direct_ro, pending_hash_ro, pending_invisible_ro, pending_next_hash_ro, yield);
-  return res;
+  // RDMA_LOG(DBG) << "coro: " << coro_id << " tx_id: " << tx_id << " check read
+  // ro";
+  auto res = CheckReadRO(pending_direct_ro, pending_hash_ro,
+                         pending_invisible_ro, pending_next_hash_ro, yield);
+  return res | lease_expired;
 }
 
 bool DTX::ExeRW(coro_yield_t& yield) {
@@ -70,41 +77,34 @@ bool DTX::ExeRW(coro_yield_t& yield) {
   std::list<HashRead> pending_next_hash_rw;
   std::list<InsertOffRead> pending_next_off_rw;
 
-  if (!IssueReadRO(pending_direct_ro, pending_hash_ro)) return false;  // RW transactions may also have RO data
-// RDMA_LOG(DBG) << "coro: " << coro_id << " tx_id: " << tx_id << " issue read rorw";
+  if (!IssueReadRO(pending_direct_ro, pending_hash_ro))
+    return false;  // RW transactions may also have RO data
+// RDMA_LOG(DBG) << "coro: " << coro_id << " tx_id: " << tx_id << " issue read
+// rorw";
 #if READ_LOCK
-  if (!IssueReadLock(pending_cas_rw, pending_hash_rw, pending_insert_off_rw)) return false;
+  if (!IssueReadLock(pending_cas_rw, pending_hash_rw, pending_insert_off_rw))
+    return false;
 #else
-  if (!IssueReadRW(pending_direct_rw, pending_hash_rw, pending_insert_off_rw)) return false;
+  if (!IssueReadRW(pending_direct_rw, pending_hash_rw, pending_insert_off_rw))
+    return false;
 #endif
 
   // Yield to other coroutines when waiting for network replies
   coro_sched->Yield(yield, coro_id);
 
-  // RDMA_LOG(DBG) << "coro: " << coro_id << " tx_id: " << tx_id << " check read rorw";
+  // RDMA_LOG(DBG) << "coro: " << coro_id << " tx_id: " << tx_id << " check read
+  // rorw";
   bool res = false;
 #if READ_LOCK
-  res = CheckReadRORW(pending_direct_ro,
-                      pending_hash_ro,
-                      pending_hash_rw,
-                      pending_insert_off_rw,
-                      pending_cas_rw,
-                      pending_invisible_ro,
-                      pending_next_hash_ro,
-                      pending_next_hash_rw,
-                      pending_next_off_rw,
-                      yield);
+  res = CheckReadRORW(pending_direct_ro, pending_hash_ro, pending_hash_rw,
+                      pending_insert_off_rw, pending_cas_rw,
+                      pending_invisible_ro, pending_next_hash_ro,
+                      pending_next_hash_rw, pending_next_off_rw, yield);
 #else
-  res = CompareCheckReadRORW(pending_direct_ro,
-                             pending_direct_rw,
-                             pending_hash_ro,
-                             pending_hash_rw,
-                             pending_next_hash_ro,
-                             pending_next_hash_rw,
-                             pending_insert_off_rw,
-                             pending_next_off_rw,
-                             pending_invisible_ro,
-                             yield);
+  res = CompareCheckReadRORW(
+      pending_direct_ro, pending_direct_rw, pending_hash_ro, pending_hash_rw,
+      pending_next_hash_ro, pending_next_hash_rw, pending_insert_off_rw,
+      pending_next_off_rw, pending_invisible_ro, yield);
 #endif
 
 #if COMMIT_TOGETHER
@@ -115,7 +115,8 @@ bool DTX::ExeRW(coro_yield_t& yield) {
 }
 
 bool DTX::Validate(coro_yield_t& yield) {
-  // The transaction is read-write, and all the written data have been locked before
+  // The transaction is read-write, and all the written data have been locked
+  // before
   if (not_eager_locked_rw_set.empty() && read_only_set.empty()) {
     // TLOG(DBG, t_id) << "save validation";
     return true;
@@ -195,7 +196,8 @@ void DTX::ParallelUndoLog() {
 
   for (auto& set_it : read_write_set) {
     if (!set_it.is_logged && !set_it.item_ptr->user_insert) {
-      memcpy(written_log_buf + cur, (char*)(set_it.item_ptr.get()), DataItemSize);
+      memcpy(written_log_buf + cur, (char*)(set_it.item_ptr.get()),
+             DataItemSize);
       cur += DataItemSize;
       set_it.is_logged = true;
     }
@@ -203,24 +205,30 @@ void DTX::ParallelUndoLog() {
 
   // Write undo logs to all memory nodes
   for (int i = 0; i < global_meta_man->remote_nodes.size(); i++) {
-    offset_t log_offset = thread_remote_log_offset_alloc->GetNextLogOffset(i, log_size);
+    offset_t log_offset =
+        thread_remote_log_offset_alloc->GetNextLogOffset(i, log_size);
     RCQP* qp = thread_qp_man->GetRemoteLogQPWithNodeID(i);
-    coro_sched->RDMALog(coro_id, tx_id, qp, written_log_buf, log_offset, log_size);
+    coro_sched->RDMALog(coro_id, tx_id, qp, written_log_buf, log_offset,
+                        log_size);
   }
 }
 
 void DTX::Abort() {
   // When failures occur, transactions need to be aborted.
-  // In general, the transaction will not abort during committing replicas if no hardware failure occurs
+  // In general, the transaction will not abort during committing replicas if no
+  // hardware failure occurs
   char* unlock_buf = thread_rdma_buffer_alloc->Alloc(sizeof(lock_t));
   *((lock_t*)unlock_buf) = 0;
   for (auto& index : locked_rw_set) {
     auto& it = read_write_set[index].item_ptr;
     node_id_t primary_node_id = global_meta_man->GetPrimaryNodeID(it->table_id);
-    RCQP* primary_qp = thread_qp_man->GetRemoteDataQPWithNodeID(primary_node_id);
-    auto rc = primary_qp->post_send(IBV_WR_RDMA_WRITE, unlock_buf, sizeof(lock_t), it->GetRemoteLockAddr(), 0);
+    RCQP* primary_qp =
+        thread_qp_man->GetRemoteDataQPWithNodeID(primary_node_id);
+    auto rc = primary_qp->post_send(IBV_WR_RDMA_WRITE, unlock_buf,
+                                    sizeof(lock_t), it->GetRemoteLockAddr(), 0);
     if (rc != SUCC) {
-      RDMA_LOG(FATAL) << "Thread " << t_id << " , Coroutine " << coro_id << " unlock fails during abortion";
+      RDMA_LOG(FATAL) << "Thread " << t_id << " , Coroutine " << coro_id
+                      << " unlock fails during abortion";
     }
   }
   tx_status = TXStatus::TX_ABORT;

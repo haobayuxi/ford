@@ -3,6 +3,8 @@
 
 #pragma once
 
+#include <time.h>
+
 #include <algorithm>
 #include <chrono>
 #include <cstdio>
@@ -55,30 +57,22 @@ class DTX {
   void RemoveLastROItem();
 
  public:
-  DTX(MetaManager* meta_man,
-      QPManager* qp_man,
-      VersionCache* status,
-      LockCache* lock_table,
-      t_id_t tid,
-      coro_id_t coroid,
-      CoroutineScheduler* sched,
-      RDMABufferAllocator* rdma_buffer_allocator,
-      LogOffsetAllocator* log_offset_allocator,
-      AddrCache* addr_buf);
-  ~DTX() {
-    Clean();
-  }
+  DTX(MetaManager* meta_man, QPManager* qp_man, VersionCache* status,
+      LockCache* lock_table, t_id_t tid, coro_id_t coroid,
+      CoroutineScheduler* sched, RDMABufferAllocator* rdma_buffer_allocator,
+      LogOffsetAllocator* log_offset_allocator, AddrCache* addr_buf);
+  ~DTX() { Clean(); }
 
  public:
-  size_t GetAddrCacheSize() {
-    return addr_cache->TotalAddrSize();
-  }
+  size_t GetAddrCacheSize() { return addr_cache->TotalAddrSize(); }
 
  private:
   // Internal transaction functions
   bool ExeRO(coro_yield_t& yield);  // Execute read-only transaction
 
-  bool ExeRW(coro_yield_t& yield);  // Execute read-write transaction, use doorbell read+cas(lock) and background undo log
+  bool ExeRW(
+      coro_yield_t& yield);  // Execute read-write transaction, use doorbell
+                             // read+cas(lock) and background undo log
 
   bool Validate(coro_yield_t& yield);  // RDMA read value versions
 
@@ -86,9 +80,11 @@ class DTX {
 
   void Abort();
 
-  bool RDMAWriteRoundTrip(RCQP* qp, char* wt_data, uint64_t remote_offset, size_t size);  // RDMA write wrapper
+  bool RDMAWriteRoundTrip(RCQP* qp, char* wt_data, uint64_t remote_offset,
+                          size_t size);  // RDMA write wrapper
 
-  bool RDMAReadRoundTrip(RCQP* qp, char* rd_data, uint64_t remote_offset, size_t size);  // RDMA read wrapper
+  bool RDMAReadRoundTrip(RCQP* qp, char* rd_data, uint64_t remote_offset,
+                         size_t size);  // RDMA read wrapper
 
   void ParallelUndoLog();
 
@@ -111,7 +107,7 @@ class DTX {
  private:
   // Transfer locking and validation into compute pool
   bool LocalLock();
-  
+
   void LocalUnlock();
 
   bool LocalValidate();
@@ -133,13 +129,17 @@ class DTX {
 
   bool IssueRemoteValidate(std::vector<ValidateRead>& pending_validate);
 
-  bool IssueCommitAll(std::vector<CommitWrite>& pending_commit_write, char* cas_buf);
+  bool IssueCommitAll(std::vector<CommitWrite>& pending_commit_write,
+                      char* cas_buf);
 
-  bool IssueCommitAllFullFlush(std::vector<CommitWrite>& pending_commit_write, char* cas_buf);
+  bool IssueCommitAllFullFlush(std::vector<CommitWrite>& pending_commit_write,
+                               char* cas_buf);
 
-  bool IssueCommitAllSelectFlush(std::vector<CommitWrite>& pending_commit_write, char* cas_buf);
+  bool IssueCommitAllSelectFlush(std::vector<CommitWrite>& pending_commit_write,
+                                 char* cas_buf);
 
-  bool IssueCommitAllBatchSelectFlush(std::vector<CommitWrite>& pending_commit_write, char* cas_buf);
+  bool IssueCommitAllBatchSelectFlush(
+      std::vector<CommitWrite>& pending_commit_write, char* cas_buf);
 
  private:
   // For coroutine check RDMA requests after yield
@@ -147,7 +147,7 @@ class DTX {
                    std::vector<HashRead>& pending_hash_ro,
                    std::list<InvisibleRead>& pending_invisible_ro,
                    std::list<HashRead>& pending_next_hash_ro,
-                   coro_yield_t& yield);
+                   bool lease_expired, coro_yield_t& yield);
 
   bool CheckReadRORW(std::vector<DirectRead>& pending_direct_ro,
                      std::vector<HashRead>& pending_hash_ro,
@@ -162,13 +162,15 @@ class DTX {
 
   bool CheckDirectRO(std::vector<DirectRead>& pending_direct_ro,
                      std::list<InvisibleRead>& pending_invisible_ro,
-                     std::list<HashRead>& pending_next_hash_ro);
+                     std::list<HashRead>& pending_next_hash_ro,
+                     bool lease_expired);
 
   bool CheckInvisibleRO(std::list<InvisibleRead>& pending_invisible_ro);
 
   bool CheckHashRO(std::vector<HashRead>& pending_hash_ro,
                    std::list<InvisibleRead>& pending_invisible_ro,
-                   std::list<HashRead>& pending_next_hash_ro);
+                   std::list<HashRead>& pending_next_hash_ro,
+                   bool lease_expired);
 
   bool CheckNextHashRO(std::list<InvisibleRead>& pending_invisible_ro,
                        std::list<HashRead>& pending_next_hash_ro);
@@ -177,7 +179,8 @@ class DTX {
                   std::list<HashRead>& pending_next_hash_rw,
                   std::list<InsertOffRead>& pending_next_off_rw);
 
-  int FindMatchSlot(HashRead& res, std::list<InvisibleRead>& pending_invisible_ro);
+  int FindMatchSlot(HashRead& res,
+                    std::list<InvisibleRead>& pending_invisible_ro);
 
   bool CheckHashRW(std::vector<HashRead>& pending_hash_rw,
                    std::list<InvisibleRead>& pending_invisible_ro,
@@ -186,7 +189,8 @@ class DTX {
   bool CheckNextHashRW(std::list<InvisibleRead>& pending_invisible_ro,
                        std::list<HashRead>& pending_next_hash_rw);
 
-  int FindInsertOff(InsertOffRead& res, std::list<InvisibleRead>& pending_invisible_ro);
+  int FindInsertOff(InsertOffRead& res,
+                    std::list<InvisibleRead>& pending_invisible_ro);
 
   bool CheckInsertOffRW(std::vector<InsertOffRead>& pending_insert_off_rw,
                         std::list<InvisibleRead>& pending_invisible_ro,
@@ -197,7 +201,8 @@ class DTX {
 
   bool CheckValidate(std::vector<ValidateRead>& pending_validate);
 
-  bool CheckCommitAll(std::vector<CommitWrite>& pending_commit_write, char* cas_buf);
+  bool CheckCommitAll(std::vector<CommitWrite>& pending_commit_write,
+                      char* cas_buf);
 
  private:
   // For comparisons
@@ -292,11 +297,14 @@ class DTX {
  private:
   CoroutineScheduler* coro_sched;  // Thread local coroutine scheduler
 
-  QPManager* thread_qp_man;  // Thread local qp connection manager. Each transaction thread has one
+  QPManager* thread_qp_man;  // Thread local qp connection manager. Each
+                             // transaction thread has one
 
-  RDMABufferAllocator* thread_rdma_buffer_alloc;  // Thread local RDMA buffer allocator
+  RDMABufferAllocator*
+      thread_rdma_buffer_alloc;  // Thread local RDMA buffer allocator
 
-  LogOffsetAllocator* thread_remote_log_offset_alloc;  // Thread local remote log offset generator
+  LogOffsetAllocator* thread_remote_log_offset_alloc;  // Thread local remote
+                                                       // log offset generator
 
   TXStatus tx_status;
 
@@ -310,14 +318,16 @@ class DTX {
 
   AddrCache* addr_cache;
 
-  // For backup-enabled read. Which backup is selected (the backup index, not the backup's machine id)
+  // For backup-enabled read. Which backup is selected (the backup index, not
+  // the backup's machine id)
   size_t select_backup;
 
   // For validate the version for insertion
   std::vector<OldVersionForInsert> old_version_for_insert;
 
   struct pair_hash {
-    inline std::size_t operator()(const std::pair<node_id_t, offset_t>& v) const {
+    inline std::size_t operator()(
+        const std::pair<node_id_t, offset_t>& v) const {
       return v.first * 31 + v.second;
     }
   };
@@ -346,13 +356,21 @@ void DTX::TxBegin(tx_id_t txid) {
 
 ALWAYS_INLINE
 void DTX::AddToReadOnlySet(DataItemPtr item) {
-  DataSetItem data_set_item{.item_ptr = std::move(item), .is_fetched = false, .is_logged = false, .read_which_node = -1, .bkt_idx = -1};
+  DataSetItem data_set_item{.item_ptr = std::move(item),
+                            .is_fetched = false,
+                            .is_logged = false,
+                            .read_which_node = -1,
+                            .bkt_idx = -1};
   read_only_set.emplace_back(data_set_item);
 }
 
 ALWAYS_INLINE
 void DTX::AddToReadWriteSet(DataItemPtr item) {
-  DataSetItem data_set_item{.item_ptr = std::move(item), .is_fetched = false, .is_logged = false, .read_which_node = -1, .bkt_idx = -1};
+  DataSetItem data_set_item{.item_ptr = std::move(item),
+                            .is_fetched = false,
+                            .is_logged = false,
+                            .read_which_node = -1,
+                            .bkt_idx = -1};
   read_write_set.emplace_back(data_set_item);
 }
 
@@ -372,8 +390,7 @@ void DTX::RemoveLastROItem() { read_only_set.pop_back(); }
 
 // RDMA write `wt_data' with size `size' to remote
 ALWAYS_INLINE
-bool DTX::RDMAWriteRoundTrip(RCQP* qp, char* wt_data,
-                             uint64_t remote_offset,
+bool DTX::RDMAWriteRoundTrip(RCQP* qp, char* wt_data, uint64_t remote_offset,
                              size_t size) {
   // ***ONLY FOR DEBUG***
   auto rc = qp->post_send(IBV_WR_RDMA_WRITE, wt_data, size, remote_offset, 0);
@@ -394,8 +411,8 @@ bool DTX::RDMAWriteRoundTrip(RCQP* qp, char* wt_data,
 // RDMA read value with size `size` from remote mr at offset `remote_offset` to
 // rd_data
 ALWAYS_INLINE
-bool DTX::RDMAReadRoundTrip(RCQP* qp, char* rd_data,
-                            uint64_t remote_offset, size_t size) {
+bool DTX::RDMAReadRoundTrip(RCQP* qp, char* rd_data, uint64_t remote_offset,
+                            size_t size) {
   // ***ONLY FOR DEBUG***
   auto rc = qp->post_send(IBV_WR_RDMA_READ, rd_data, size, remote_offset, 0);
   if (rc != SUCC) {

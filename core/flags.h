@@ -70,16 +70,20 @@ const size_t MAX_ITEM_SIZE = 664;
 #define USE_LOCAL_ADDR_CACHE 0
 
 // 1: Locks block reads
-// 0: Use FORD's machenism, i.e., visibility control to enable read locked data but not invisible data
-// This is an **opposite** scheme compared with our visibility control, i.e., open this will close visibility, and close this will open visibility
+// 0: Use FORD's machenism, i.e., visibility control to enable read locked data
+// but not invisible data This is an **opposite** scheme compared with our
+// visibility control, i.e., open this will close visibility, and close this
+// will open visibility
 #define LOCK_REFUSE_READ_RO 0
 #define LOCK_REFUSE_READ_RW 0
 
 /*********************** For micro-benchmarks **********************/
 // 0: Does not wait lock, just abort (For end-to-end tests)
-// 1: wait lock until resuming execution (For lock duration tests, remember set coroutine num as 2)
+// 1: wait lock until resuming execution (For lock duration tests, remember set
+// coroutine num as 2)
 #define LOCK_WAIT 0
 
-// 0: Does not busily wait the data to be visible, e.g., yield to another coroutine to execute the next tx (For end-to-end tests)
-// 1: Busily wait the data to be visible (For visibility tests, remember set coroutine num as 2)
+// 0: Does not busily wait the data to be visible, e.g., yield to another
+// coroutine to execute the next tx (For end-to-end tests) 1: Busily wait the
+// data to be visible (For visibility tests, remember set coroutine num as 2)
 #define INV_BUSY_WAIT 0
