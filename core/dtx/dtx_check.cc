@@ -18,12 +18,15 @@ bool DTX::CheckReadRO(std::vector<DirectRead>& pending_direct_ro,
 
   // During results checking, we may re-read data due to invisibility and hash
   // collisions
-  while (!pending_invisible_ro.empty() || !pending_next_hash_ro.empty()) {
-    coro_sched->Yield(yield, coro_id);
-    if (!CheckInvisibleRO(pending_invisible_ro)) return false;
-    if (!CheckNextHashRO(pending_invisible_ro, pending_next_hash_ro))
-      return false;
+  if (!lease_expired) {
+    while (!pending_invisible_ro.empty() || !pending_next_hash_ro.empty()) {
+      coro_sched->Yield(yield, coro_id);
+      if (!CheckInvisibleRO(pending_invisible_ro)) return false;
+      if (!CheckNextHashRO(pending_invisible_ro, pending_next_hash_ro))
+        return false;
+    }
   }
+
   return true;
 }
 
