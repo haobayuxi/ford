@@ -55,8 +55,9 @@ bool DTX::ExeRO(coro_yield_t& yield) {
   std::list<HashRead> pending_next_hash_ro;
   // RDMA_LOG(DBG) << "coro: " << coro_id << " tx_id: " << tx_id << " check read
   // ro";
-  auto res = CheckReadRO(pending_direct_ro, pending_hash_ro,
-                         pending_invisible_ro, pending_next_hash_ro, yield);
+  auto res =
+      CheckReadRO(pending_direct_ro, pending_hash_ro, pending_invisible_ro,
+                  pending_next_hash_ro, lease_expired, yield);
   return res | lease_expired;
 }
 
