@@ -16,9 +16,8 @@ bool DTX::CompareExeRO(coro_yield_t& yield) {
   // Receive data
   std::list<HashRead> pending_next_hash_ro;
   std::list<InvisibleRead> pending_invisible_ro;
-  auto res =
-      CheckReadRO(pending_direct_ro, pending_hash_ro, pending_invisible_ro,
-                  pending_next_hash_ro, false, yield);
+  auto res = CheckReadRO(pending_direct_ro, pending_hash_ro,
+                         pending_invisible_ro, pending_next_hash_ro, yield);
   return res;
 }
 
