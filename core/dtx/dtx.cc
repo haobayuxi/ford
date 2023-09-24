@@ -49,11 +49,11 @@ bool DTX::ExeRO(coro_yield_t& yield) {
   coro_sched->Yield(yield, coro_id);
 
   long long end_time = get_clock_sys_time_us();
-  auto lease_expired = (end_time - start_time) < 10;
+  auto lease_expired = (end_time - start_time) < 40;
   // Receive data
   std::list<InvisibleRead> pending_invisible_ro;
   std::list<HashRead> pending_next_hash_ro;
-  RDMA_LOG(INFO) << "lease: " << end_time - start_time;
+  // RDMA_LOG(INFO) << "lease: " << end_time - start_time;
   // RDMA_LOG(DBG) << "coro: " << coro_id << " tx_id: " << tx_id << " check read
   // ro";
   auto res =
