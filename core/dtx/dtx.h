@@ -33,6 +33,16 @@
 #include "util/hash.h"
 #include "util/json_config.h"
 
+long long get_clock_sys_time_us() {
+  struct timespec tp;
+  long long time_us = 0;
+
+  clock_gettime(CLOCK_MONOTONIC, &tp);
+  time_us = (long long)tp.tv_sec * 1000000 + tp.tv_nsec / 1000;
+
+  return time_us;
+}
+
 /* One-sided RDMA-enabled distributed transaction processing */
 class DTX {
  public:
@@ -281,6 +291,7 @@ class DTX {
  public:
   // For statistics
   std::vector<uint64_t> lock_durations;  // us
+  long long start_time;
 
   std::vector<uint64_t> invisible_durations;  // us
 
@@ -350,6 +361,7 @@ ALWAYS_INLINE
 void DTX::TxBegin(tx_id_t txid) {
   Clean();  // Clean the last transaction states
   tx_id = txid;
+  start_time = get_clock_sys_time_us();
 }
 
 ALWAYS_INLINE

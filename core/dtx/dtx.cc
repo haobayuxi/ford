@@ -3,16 +3,6 @@
 
 #include "dtx/dtx.h"
 
-long long get_clock_sys_time_us() {
-  struct timespec tp;
-  long long time_us = 0;
-
-  clock_gettime(CLOCK_MONOTONIC, &tp);
-  time_us = (long long)tp.tv_sec * 1000000 + tp.tv_nsec / 1000;
-
-  return time_us;
-}
-
 DTX::DTX(MetaManager* meta_man, QPManager* qp_man, VersionCache* status,
          LockCache* lock_table, t_id_t tid, coro_id_t coroid,
          CoroutineScheduler* sched, RDMABufferAllocator* rdma_buffer_allocator,
