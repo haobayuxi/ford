@@ -12,7 +12,8 @@ bool DTX::CheckReadRO(std::vector<DirectRead>& pending_direct_ro,
   if (!CheckDirectRO(pending_direct_ro, pending_invisible_ro,
                      pending_next_hash_ro, lease_expired))
     return false;
-  if (!CheckHashRO(pending_hash_ro, pending_invisible_ro, pending_next_hash_ro))
+  if (!CheckHashRO(pending_hash_ro, pending_invisible_ro, pending_next_hash_ro,
+                   lease_expired))
     return false;
 
   // During results checking, we may re-read data due to invisibility and hash
@@ -38,9 +39,10 @@ bool DTX::CheckReadRORW(std::vector<DirectRead>& pending_direct_ro,
                         coro_yield_t& yield) {
   // check read-only results
   if (!CheckDirectRO(pending_direct_ro, pending_invisible_ro,
-                     pending_next_hash_ro))
+                     pending_next_hash_ro, false))
     return false;
-  if (!CheckHashRO(pending_hash_ro, pending_invisible_ro, pending_next_hash_ro))
+  if (!CheckHashRO(pending_hash_ro, pending_invisible_ro, pending_next_hash_ro,
+                   false))
     return false;
   // The reason to use separate CheckHashRO and CheckHashRW: We need to compare
   // txid with the fetched id in read-write txn check read-write results
