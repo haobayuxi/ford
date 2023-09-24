@@ -45,7 +45,7 @@ bool DTX::CheckDirectRO(std::vector<DirectRead>& pending_direct_ro,
     } else {
       // The cached address is stale. E.g., insert a new item after being
       // deleted Local cache does not have. We have to re-read via hash
-      if lease_expired {
+      if (lease_expired) {
         return true;
       }
       node_id_t remote_node_id =
@@ -112,7 +112,7 @@ bool DTX::CheckHashRO(std::vector<HashRead>& pending_hash_ro,
       }
 #endif
     } else {
-      if lease_expired {
+      if (lease_expired) {
         return true;
       }
       if (local_hash_node->next == nullptr) return false;
