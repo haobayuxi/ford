@@ -6,8 +6,7 @@
 
 bool DTX::CheckDirectRO(std::vector<DirectRead>& pending_direct_ro,
                         std::list<InvisibleRead>& pending_invisible_ro,
-                        std::list<HashRead>& pending_next_hash_ro,
-                        bool lease_expired) {
+                        std::list<HashRead>& pending_next_hash_ro) {
   // Check results from direct read via local cache
   for (auto& res : pending_direct_ro) {
     auto* it = res.item->item_ptr.get();
@@ -45,9 +44,7 @@ bool DTX::CheckDirectRO(std::vector<DirectRead>& pending_direct_ro,
     } else {
       // The cached address is stale. E.g., insert a new item after being
       // deleted Local cache does not have. We have to re-read via hash
-      if (lease_expired) {
-        return true;
-      }
+
       node_id_t remote_node_id =
           global_meta_man->GetPrimaryNodeID(it->table_id);
       const HashMeta& meta =
@@ -71,8 +68,7 @@ bool DTX::CheckDirectRO(std::vector<DirectRead>& pending_direct_ro,
 
 bool DTX::CheckHashRO(std::vector<HashRead>& pending_hash_ro,
                       std::list<InvisibleRead>& pending_invisible_ro,
-                      std::list<HashRead>& pending_next_hash_ro,
-                      bool lease_expired) {
+                      std::list<HashRead>& pending_next_hash_ro) {
   // Check results from hash read
   for (auto& res : pending_hash_ro) {
     auto* local_hash_node = (HashNode*)res.buf;
@@ -112,9 +108,6 @@ bool DTX::CheckHashRO(std::vector<HashRead>& pending_hash_ro,
       }
 #endif
     } else {
-      if (lease_expired) {
-        return true;
-      }
       if (local_hash_node->next == nullptr) return false;
       // Not found, we need to re-read the next bucket
       auto node_off = (uint64_t)local_hash_node->next - res.meta.data_ptr +

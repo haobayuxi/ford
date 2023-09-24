@@ -147,7 +147,7 @@ class DTX {
                    std::vector<HashRead>& pending_hash_ro,
                    std::list<InvisibleRead>& pending_invisible_ro,
                    std::list<HashRead>& pending_next_hash_ro,
-                   bool lease_expired, coro_yield_t& yield);
+                   coro_yield_t& yield);
 
   bool CheckReadRORW(std::vector<DirectRead>& pending_direct_ro,
                      std::vector<HashRead>& pending_hash_ro,
@@ -162,15 +162,13 @@ class DTX {
 
   bool CheckDirectRO(std::vector<DirectRead>& pending_direct_ro,
                      std::list<InvisibleRead>& pending_invisible_ro,
-                     std::list<HashRead>& pending_next_hash_ro,
-                     bool lease_expired);
+                     std::list<HashRead>& pending_next_hash_ro, );
 
   bool CheckInvisibleRO(std::list<InvisibleRead>& pending_invisible_ro);
 
   bool CheckHashRO(std::vector<HashRead>& pending_hash_ro,
                    std::list<InvisibleRead>& pending_invisible_ro,
-                   std::list<HashRead>& pending_next_hash_ro,
-                   bool lease_expired);
+                   std::list<HashRead>& pending_next_hash_ro);
 
   bool CheckNextHashRO(std::list<InvisibleRead>& pending_invisible_ro,
                        std::list<HashRead>& pending_next_hash_ro);

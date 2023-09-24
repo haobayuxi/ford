@@ -41,25 +41,18 @@ bool DTX::ExeRO(coro_yield_t& yield) {
   // You can read from primary or backup
   std::vector<DirectRead> pending_direct_ro;
   std::vector<HashRead> pending_hash_ro;
-  // start time
-  long long start_time = get_clock_sys_time_us();
   if (!IssueReadRO(pending_direct_ro, pending_hash_ro)) return false;
 
   // Yield to other coroutines when waiting for network replies
   coro_sched->Yield(yield, coro_id);
 
-  long long end_time = get_clock_sys_time_us();
-  auto lease_expired = (end_time - start_time) < 40;
   // Receive data
   std::list<InvisibleRead> pending_invisible_ro;
   std::list<HashRead> pending_next_hash_ro;
-  RDMA_LOG(INFO) << "lease: " << end_time - start_time << "---"
-                 << lease_expired;
   // RDMA_LOG(DBG) << "coro: " << coro_id << " tx_id: " << tx_id << " check read
   // ro";
-  auto res =
-      CheckReadRO(pending_direct_ro, pending_hash_ro, pending_invisible_ro,
-                  pending_next_hash_ro, lease_expired, yield);
+  auto res = CheckReadRO(pending_direct_ro, pending_hash_ro,
+                         pending_invisible_ro, pending_next_hash_ro, yield);
   return res;
 }
 
@@ -118,6 +111,8 @@ bool DTX::ExeRW(coro_yield_t& yield) {
 }
 
 bool DTX::Validate(coro_yield_t& yield) {
+  long long end_time = get_clock_sys_time_us();
+  auto lease_expired = (end_time - start_time) < 40;
   // The transaction is read-write, and all the written data have been locked
   // before
   if (not_eager_locked_rw_set.empty() && read_only_set.empty()) {
