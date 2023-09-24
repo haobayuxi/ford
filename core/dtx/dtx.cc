@@ -59,7 +59,7 @@ bool DTX::ExeRO(coro_yield_t& yield) {
   auto res =
       CheckReadRO(pending_direct_ro, pending_hash_ro, pending_invisible_ro,
                   pending_next_hash_ro, lease_expired, yield);
-  return res | lease_expired;
+  return res;
 }
 
 bool DTX::ExeRW(coro_yield_t& yield) {
