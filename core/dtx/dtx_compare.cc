@@ -16,7 +16,9 @@ bool DTX::CompareExeRO(coro_yield_t& yield) {
   // Receive data
   std::list<HashRead> pending_next_hash_ro;
   std::list<InvisibleRead> pending_invisible_ro;
-  auto res = CheckReadRO(pending_direct_ro, pending_hash_ro, pending_invisible_ro, pending_next_hash_ro, yield);
+  auto res =
+      CheckReadRO(pending_direct_ro, pending_hash_ro, pending_invisible_ro,
+                  pending_next_hash_ro, false, yield);
   return res;
 }
 
@@ -36,21 +38,17 @@ bool DTX::CompareExeRW(coro_yield_t& yield) {
   std::list<InvisibleRead> pending_invisible_ro;
 
   if (!CompareIssueReadRO(pending_direct_ro, pending_hash_ro)) return false;
-  if (!CompareIssueReadRW(pending_direct_rw, pending_hash_rw, pending_insert_off_rw)) return false;
+  if (!CompareIssueReadRW(pending_direct_rw, pending_hash_rw,
+                          pending_insert_off_rw))
+    return false;
 
   // Yield to other coroutines when waiting for network replies
   coro_sched->Yield(yield, coro_id);
 
-  auto res = CompareCheckReadRORW(pending_direct_ro,
-                                  pending_direct_rw,
-                                  pending_hash_ro,
-                                  pending_hash_rw,
-                                  pending_next_hash_ro,
-                                  pending_next_hash_rw,
-                                  pending_insert_off_rw,
-                                  pending_next_off_rw,
-                                  pending_invisible_ro,
-                                  yield);
+  auto res = CompareCheckReadRORW(
+      pending_direct_ro, pending_direct_rw, pending_hash_ro, pending_hash_rw,
+      pending_next_hash_ro, pending_next_hash_rw, pending_insert_off_rw,
+      pending_next_off_rw, pending_invisible_ro, yield);
 
   if (global_meta_man->txn_system == DTX_SYS::LOCAL) {
     ParallelUndoLog();
@@ -79,7 +77,8 @@ bool DTX::CompareValidation(coro_yield_t& yield) {
 }
 
 bool DTX::CompareLockingValidation(coro_yield_t& yield) {
-  // This is the same with our validation scheme, i.e., lock+read write set, read read set
+  // This is the same with our validation scheme, i.e., lock+read write set,
+  // read read set
   std::vector<ValidateRead> pending_validate;
   if (!CompareIssueLockValidation(pending_validate)) return false;
 
