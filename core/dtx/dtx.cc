@@ -110,9 +110,9 @@ bool DTX::Validate(coro_yield_t& yield) {
     // TLOG(DBG, t_id) << "save validation";
     return true;
   }
-  // if (lease_expired) {
-  //   return true;
-  // }
+  if (lease_expired) {
+    return true;
+  }
 
   std::vector<ValidateRead> pending_validate;
 
