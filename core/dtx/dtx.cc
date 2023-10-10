@@ -111,9 +111,9 @@ bool DTX::Validate(coro_yield_t& yield) {
     return true;
   }
 
-  if (lease_expired) {
-    return true;
-  }
+  // if (lease_expired) {
+  //   return true;
+  // }
 
   std::vector<ValidateRead> pending_validate;
 
