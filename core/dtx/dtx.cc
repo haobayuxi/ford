@@ -101,12 +101,16 @@ bool DTX::ExeRW(coro_yield_t& yield) {
 }
 
 bool DTX::Validate(coro_yield_t& yield) {
-  // long long end_time = get_clock_sys_time_us();
-  // auto lease_expired = (end_time - start_time) < 40;
+  long long end_time = get_clock_sys_time_us();
+  auto lease_expired = (end_time - start_time) < 40;
   // The transaction is read-write, and all the written data have been locked
   // before
   if (not_eager_locked_rw_set.empty() && read_only_set.empty()) {
     // TLOG(DBG, t_id) << "save validation";
+    return true;
+  }
+
+  if (lease_expired) {
     return true;
   }
 
