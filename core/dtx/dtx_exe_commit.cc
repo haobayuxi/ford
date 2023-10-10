@@ -25,7 +25,9 @@ bool DTX::TxExe(coro_yield_t& yield, bool fail_abort) {
         goto ABORT;
       }
     }
-  } else if (global_meta_man->txn_system == DTX_SYS::FaRM || global_meta_man->txn_system == DTX_SYS::DrTMH || global_meta_man->txn_system == DTX_SYS::LOCAL) {
+  } else if (global_meta_man->txn_system == DTX_SYS::FaRM ||
+             global_meta_man->txn_system == DTX_SYS::DrTMH ||
+             global_meta_man->txn_system == DTX_SYS::LOCAL) {
     if (read_write_set.empty()) {
       if (CompareExeRO(yield))
         return true;
@@ -50,9 +52,9 @@ ABORT:
 
 bool DTX::TxCommit(coro_yield_t& yield) {
   // Only read one item
-  if (read_write_set.empty() && read_only_set.size() == 1) {
-    return true;
-  }
+  // if (read_write_set.empty() && read_only_set.size() == 1) {
+  //   return true;
+  // }
 
   bool commit_stat;
 
@@ -65,7 +67,8 @@ bool DTX::TxCommit(coro_yield_t& yield) {
       goto ABORT;
     }
 
-    // Next step. If read-write txns, we need to commit the updates to remote replicas
+    // Next step. If read-write txns, we need to commit the updates to remote
+    // replicas
     if (!read_write_set.empty()) {
       // Write back for read-write tx
 #if COMMIT_TOGETHER

@@ -101,7 +101,7 @@ bool DTX::ExeRW(coro_yield_t& yield) {
 }
 
 bool DTX::Validate(coro_yield_t& yield) {
-  return true;
+  // return true;
   long long end_time = get_clock_sys_time_us();
   auto lease_expired = (end_time - start_time) < 40;
   // RDMA_LOG(INFO) << "lease:" << end_time - start_time << " : " <<
